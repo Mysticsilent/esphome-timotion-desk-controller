@@ -58,6 +58,8 @@ class TimotionDeskControllerComponent : public Component, public cover::Cover, p
 
   bool notify_disable_ = true;
   int not_moving_loop_ = 0;
+  float last_move_position_{0.0f};
+  uint8_t stalled_loops_{0};
 
   void write_value_(uint16_t handle, uint64_t value);
   void read_value_(uint16_t handle);

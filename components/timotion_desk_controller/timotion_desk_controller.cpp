@@ -2,6 +2,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
 #include <array>
+#include <cmath>
 #include <string>
 
 namespace esphome {
@@ -11,6 +12,8 @@ static const char *TAG = "timotion_desk_controller";
 
 static const float DESK_MIN_HEIGHT = 65;
 static const float DESK_MAX_HEIGHT = 130;
+static const float POSITION_EPSILON = 0.01f;
+static const uint8_t STALLED_LOOPS_LIMIT = 10;
 
 static float transform_height_to_position(float height) {
   return (height - DESK_MIN_HEIGHT) / (DESK_MAX_HEIGHT - DESK_MIN_HEIGHT);
@@ -208,10 +211,13 @@ void TimotionDeskControllerComponent::publish_cover_state_(uint8_t *value, uint1
   //   if (speed == 40) {
   if (speed == 64) {
     this->current_operation = cover::COVER_OPERATION_IDLE;
-  } else if (this->position < position) {
-    this->current_operation = cover::COVER_OPERATION_OPENING;
-  } else if (this->position > position) {
-    this->current_operation = cover::COVER_OPERATION_CLOSING;
+  } else if (!this->controlled_) {
+    // Only infer direction from measurements when we're not in target-controlled movement.
+    if (this->position < position) {
+      this->current_operation = cover::COVER_OPERATION_OPENING;
+    } else if (this->position > position) {
+      this->current_operation = cover::COVER_OPERATION_CLOSING;
+    }
   }
 
   this->position = position;
@@ -234,6 +240,25 @@ void TimotionDeskControllerComponent::move_desk_() {
     ESP_LOGD(TAG, "Update Desk - target reached");
     this->stop_move_();
     return;
+  }
+
+  // Stop if command is active but position is no longer changing.
+  if (std::fabs(this->position - this->last_move_position_) <= POSITION_EPSILON / 4.0f) {
+    this->stalled_loops_++;
+    if (this->stalled_loops_ > STALLED_LOOPS_LIMIT) {
+      if (this->position_target_ >= 1.0f - POSITION_EPSILON) {
+        this->position = 1.0f;
+      } else if (this->position_target_ <= POSITION_EPSILON) {
+        this->position = 0.0f;
+      }
+      ESP_LOGD(TAG, "Update Desk - position stalled, stopping movement");
+      this->publish_state(false);
+      this->stop_move_();
+      return;
+    }
+  } else {
+    this->stalled_loops_ = 0;
+    this->last_move_position_ = this->position;
   }
 
   if (this->notify_disable_) {
@@ -262,9 +287,9 @@ void TimotionDeskControllerComponent::control(const cover::CoverCall &call) {
       this->stop_move_();
     }
 
-    this->position_target_ = *call.get_position();
+    this->position_target_ = clamp(*call.get_position(), 0.0f, 1.0f);
 
-    if (this->position == this->position_target_) {
+    if (std::fabs(this->position - this->position_target_) <= POSITION_EPSILON) {
       return;
     }
 
@@ -286,6 +311,8 @@ void TimotionDeskControllerComponent::control(const cover::CoverCall &call) {
 
 void TimotionDeskControllerComponent::start_move_torwards_() {
   this->controlled_ = true;
+  this->last_move_position_ = this->position;
+  this->stalled_loops_ = 0;
   if (this->notify_disable_) {
     this->not_moving_loop_ = 0;
   }
@@ -321,9 +348,9 @@ void TimotionDeskControllerComponent::stop_move_() {
 bool TimotionDeskControllerComponent::is_at_target_() const {
   switch (this->current_operation) {
     case cover::COVER_OPERATION_OPENING:
-      return this->position >= this->position_target_;
+      return this->position + POSITION_EPSILON >= this->position_target_;
     case cover::COVER_OPERATION_CLOSING:
-      return this->position <= this->position_target_;
+      return this->position <= this->position_target_ + POSITION_EPSILON;
     case cover::COVER_OPERATION_IDLE:
       if (this->notify_disable_) {
         return !this->controlled_;
