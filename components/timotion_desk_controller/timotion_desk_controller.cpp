@@ -63,8 +63,8 @@ void TimotionDeskControllerComponent::gattc_event_handler(esp_gattc_cb_event_t e
       auto chr_output = this->parent()->get_characteristic(this->output_service_uuid_, this->output_char_uuid_);
       if (chr_output == nullptr) {
         this->status_set_warning();
-        std::array<char, espbt::ESPBTUUID::UUID_STR_LEN> output_service_uuid_buf{};
-        std::array<char, espbt::ESPBTUUID::UUID_STR_LEN> output_char_uuid_buf{};
+        std::array<char, 37> output_service_uuid_buf{};
+        std::array<char, 37> output_char_uuid_buf{};
         ESP_LOGW(TAG, "No characteristic found at service %s char %s",
                  this->output_service_uuid_.to_str(output_service_uuid_buf),
                  this->output_char_uuid_.to_str(output_char_uuid_buf));
@@ -84,8 +84,8 @@ void TimotionDeskControllerComponent::gattc_event_handler(esp_gattc_cb_event_t e
       auto chr_input = this->parent()->get_characteristic(this->input_service_uuid_, this->input_char_uuid_);
       if (chr_input == nullptr) {
         this->status_set_warning();
-        std::array<char, espbt::ESPBTUUID::UUID_STR_LEN> input_service_uuid_buf{};
-        std::array<char, espbt::ESPBTUUID::UUID_STR_LEN> input_char_uuid_buf{};
+        std::array<char, 37> input_service_uuid_buf{};
+        std::array<char, 37> input_char_uuid_buf{};
         ESP_LOGW(TAG, "No characteristic found at service %s char %s",
                  this->input_service_uuid_.to_str(input_service_uuid_buf),
                  this->input_char_uuid_.to_str(input_char_uuid_buf));
@@ -98,8 +98,8 @@ void TimotionDeskControllerComponent::gattc_event_handler(esp_gattc_cb_event_t e
       auto chr_control = this->parent()->get_characteristic(this->control_service_uuid_, this->control_char_uuid_);
       if (chr_control == nullptr) {
         this->status_set_warning();
-        std::array<char, espbt::ESPBTUUID::UUID_STR_LEN> control_service_uuid_buf{};
-        std::array<char, espbt::ESPBTUUID::UUID_STR_LEN> control_char_uuid_buf{};
+        std::array<char, 37> control_service_uuid_buf{};
+        std::array<char, 37> control_char_uuid_buf{};
         ESP_LOGW(TAG, "No characteristic found at service %s char %s",
                  this->control_service_uuid_.to_str(control_service_uuid_buf),
                  this->control_char_uuid_.to_str(control_char_uuid_buf));
