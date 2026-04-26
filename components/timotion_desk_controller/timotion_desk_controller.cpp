@@ -14,7 +14,9 @@ static const float DESK_MAX_HEIGHT = 130;
 static float transform_height_to_position(float height) {
   return (height - DESK_MIN_HEIGHT) / (DESK_MAX_HEIGHT - DESK_MIN_HEIGHT);
 }
-static float transform_position_to_height(float position) { return position * DESK_MAX_HEIGHT; }
+static float transform_position_to_height(float position) {
+  return (position * (DESK_MAX_HEIGHT - DESK_MIN_HEIGHT)) + DESK_MIN_HEIGHT;
+}
 
 void TimotionDeskControllerComponent::loop() {}
 
@@ -137,6 +139,10 @@ void TimotionDeskControllerComponent::gattc_event_handler(esp_gattc_cb_event_t e
 }
 
 void TimotionDeskControllerComponent::write_value_(uint16_t handle, uint64_t value) {
+  if (handle == 0) {
+    ESP_LOGW(TAG, "[%s] Skip write, characteristic handle is not ready yet", this->get_name().c_str());
+    return;
+  }
   ESP_LOGD(">>>> ", "write_value_");
   uint8_t data[5];
   for (int i = 4; i >= 0; --i) {
@@ -153,6 +159,10 @@ void TimotionDeskControllerComponent::write_value_(uint16_t handle, uint64_t val
 }
 
 void TimotionDeskControllerComponent::read_value_(uint16_t handle) {
+  if (handle == 0) {
+    ESP_LOGW(TAG, "[%s] Skip read, characteristic handle is not ready yet", this->get_name().c_str());
+    return;
+  }
   auto status_read = esp_ble_gattc_read_char(this->parent()->get_gattc_if(), this->parent()->get_conn_id(), handle,
                                              ESP_GATT_AUTH_REQ_NONE);
   if (status_read) {
@@ -170,17 +180,20 @@ cover::CoverTraits TimotionDeskControllerComponent::get_traits() {
 }
 
 void TimotionDeskControllerComponent::publish_cover_state_(uint8_t *value, uint16_t value_len) {
-  std::vector<uint8_t> x(value, value + value_len);
+  if (value_len < 4) {
+    ESP_LOGW(TAG, "[%s] Invalid notification payload length: %u", this->get_name().c_str(), value_len);
+    return;
+  }
 
-  uint16_t height = x[3];
-  uint16_t speed = x[1];
+  const uint16_t height = value[3];
+  const uint16_t speed = value[1];
 
   if (this->lastHeight == height && this->lastSpeed == speed) return; 
   this->lastHeight = height;
   this->lastSpeed = speed;
 
-  float position = transform_height_to_position((float) height);
-  ESP_LOGCONFIG(TAG, "publish %d %d %d %d", speed, height, position, this->position);
+  const float position = clamp(transform_height_to_position(static_cast<float>(height)), 0.0f, 1.0f);
+  ESP_LOGD(TAG, "publish speed=%u height=%u position=%.3f previous=%.3f", speed, height, position, this->position);
 
   //   if (speed == 40) {
   if (speed == 64) {

@@ -41,20 +41,20 @@ class TimotionDeskControllerComponent : public Component, public cover::Cover, p
 
   espbt::ESPBTUUID output_service_uuid_ = uuid128_from_string("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
   espbt::ESPBTUUID output_char_uuid_ = uuid128_from_string("6e400003-b5a3-f393-e0a9-e50e24dcca9e");
-  uint16_t output_handle_;
+  uint16_t output_handle_{0};
 
   espbt::ESPBTUUID input_service_uuid_ = uuid128_from_string("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
   espbt::ESPBTUUID input_char_uuid_ = uuid128_from_string("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
-  uint16_t input_handle_;
+  uint16_t input_handle_{0};
 
   espbt::ESPBTUUID control_service_uuid_ = uuid128_from_string("6e400001-b5a3-f393-e0a9-e50e24dcca9e");
   espbt::ESPBTUUID control_char_uuid_ = uuid128_from_string("6e400002-b5a3-f393-e0a9-e50e24dcca9e");
-  uint16_t control_handle_;
-  uint16_t lastHeight;
-  uint16_t lastSpeed;
+  uint16_t control_handle_{0};
+  uint16_t lastHeight{0};
+  uint16_t lastSpeed{0};
 
   bool controlled_ = false;
-  float position_target_;
+  float position_target_{0.0f};
 
   bool notify_disable_ = true;
   int not_moving_loop_ = 0;
